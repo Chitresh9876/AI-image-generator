@@ -2,8 +2,8 @@ import React,{ useState, useEffect } from 'react'
 
 import { Loader, Card, FormField} from '../components'
 
-const RenderCards = ({data, title})=>{
-  if(data.length > 0){
+const  RenderCards = ({data, title})=>{
+  if(data?.length > 0){
     return data.map((post) => <Card key={post.id} {...post} />)
   }
 
@@ -13,9 +13,52 @@ const RenderCards = ({data, title})=>{
 }
 
 const Home = () => {
-  const [loading, newLoading ] = useState(false)
+  const [loading, setLoading ] = useState(false)
   const [allPosts, setAllPosts] = useState(null)
-  const [searchText, useSearchText] = useState('')
+  const [searchText, setSearchText] = useState('')
+  const [searchedResult, setsearchedResult] = useState(null)
+  const [searchedTimout, setsearchedTimeout] = useState(null)
+  
+
+  useEffect(()=>{
+    const fetchPost = async () => {
+    setLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:8080/api/v1/post', {
+        method: 'GET',
+        headers: {
+          'Content-Type' : 'application/json'
+        },
+      })
+
+      if(response.ok)
+       {
+        const result = await response.json();
+        setAllPosts(result.data.reverse());
+       }
+    } catch (error) {
+      alert(error);
+    } finally{
+      setLoading(false);
+    }
+  }
+  fetchPost();
+  },[])
+
+  const handleSearchChange = (e) =>{
+    clearTimeout(searchedTimout)
+    
+    setSearchText(e.target.value)
+
+    setsearchedTimeout(
+      setTimeout(()=>{
+        const searchedResults = allPosts.filter((item) => item.name.toLowerCase().includes(searchText.toLowerCase()) || item.prompt.toLowerCase().include(searchText.toLowerCase()));
+
+        setsearchedResult(searchedResults)
+      },500)
+    )
+  }
 
   return (
     <section className='max-w-7xl mx-auto'>
@@ -25,7 +68,13 @@ const Home = () => {
       </div>
 
       <div className="mt-16">
-        <FormField/>
+        <FormField
+        LableName='Search Post'
+        type = 'text'
+        name = 'text'
+        placeholder='Search Post'
+        value={searchText}
+        handleChange={handleSearchChange}/>
       </div>
 
       <div className="mt-10">
@@ -45,12 +94,12 @@ const Home = () => {
               {
                 searchText ? (
                   <RenderCards 
-                  data={[]}
+                  data={searchedResult}
                   title='No search result found'
                   />
                 ) : (
                   <RenderCards
-                  data = {[]}
+                  data = {allPosts}
                   title = 'No Post Found'
                   />
                 )
